@@ -12,19 +12,13 @@ if (!BOT_TOKEN || !TARGET_CHAT_ID || !ADMIN_USER_ID) {
 
 const bot = new Telegraf(BOT_TOKEN);
 
-function extractXLink(text) {
-  if (!text) return null;
-
-  const regex =
-    /(https?:\/\/(?:www\.)?(?:x\.com|twitter\.com)\/[A-Za-z0-9_]+\/status\/\d+)/i;
-
-  const match = text.match(regex);
-  return match ? match[1] : null;
+function isAdmin(ctx) {
+  return String(ctx.from.id) === String(ADMIN_USER_ID);
 }
 
 bot.start(async (ctx) => {
   await ctx.reply(
-    "✅ NijiX Forward Bot Online\n\nSend me an X post link and I will forward it to the target group."
+    "✅ NijiX Forward Bot Online\n\nSend me any message and I will forward it to the group."
   );
 });
 
@@ -36,33 +30,38 @@ bot.command("myid", async (ctx) => {
   await ctx.reply(`Your Telegram user ID is: ${ctx.from.id}`);
 });
 
-bot.on("text", async (ctx) => {
+bot.on("message", async (ctx) => {
   try {
-    const senderId = String(ctx.from.id);
-
-    if (senderId !== String(ADMIN_USER_ID)) {
+    if (!isAdmin(ctx)) {
       await ctx.reply("⛔ You are not allowed to use this bot.");
       return;
     }
 
-    const text = ctx.message.text.trim();
-    const xLink = extractXLink(text);
+    const message = ctx.message;
 
-    if (!xLink) {
-      await ctx.reply("⚠️ Please send a valid X post link.");
+    if (message.text) {
+      await bot.telegram.sendMessage(
+        TARGET_CHAT_ID,
+        message.text,
+        { disable_web_page_preview: false }
+      );
+    } else if (message.photo) {
+      const fileId = message.photo[message.photo.length - 1].file_id;
+
+      await bot.telegram.sendPhoto(
+        TARGET_CHAT_ID,
+        fileId,
+        { caption: message.caption || "" }
+      );
+    } else {
+      await ctx.reply("⚠️ This message type is not supported yet.");
       return;
     }
 
-    const message =
-`🚨 NijiX New Post
-
-🔗 ${xLink}`;
-
-    await bot.telegram.sendMessage(TARGET_CHAT_ID, message);
-    await ctx.reply("✅ Sent to target group.");
+    await ctx.reply("✅ Sent to group.");
   } catch (error) {
     console.error("Forward error:", error.message);
-    await ctx.reply("❌ Failed to forward message.");
+    await ctx.reply("❌ Failed to forward.");
   }
 });
 
