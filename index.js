@@ -39,55 +39,73 @@ bot.command("myid", async (ctx) => {
 });
 
 bot.on("message", async (ctx) => {
+
+  // DEBUG 查看 chat id
+  console.log("CHAT ID:", ctx.chat.id);
+  console.log("CHAT TYPE:", ctx.chat.type);
+
   try {
+
     // 只接受私聊
     if (!isPrivateChat(ctx)) return;
 
-    // 只允许管理员本人使用
+    // 只允许管理员使用
     if (!isAdmin(ctx)) {
-      await ctx.reply("⛔ You are not allowed to use this bot.");
       return;
     }
 
     const message = ctx.message;
 
-    // 忽略 /start /ping /myid 这类命令本身，避免被重复转发
+    // 忽略 commands
     if (message.text && message.text.startsWith("/")) {
       return;
     }
 
     // 文字
     if (message.text) {
+
       await bot.telegram.sendMessage(
         TARGET_CHAT_ID,
         message.text,
-        { disable_web_page_preview: false }
+        {
+          disable_web_page_preview: false
+        }
       );
+
       await ctx.reply("✅ Sent to group.");
       return;
     }
 
     // 图片
     if (message.photo) {
-      const fileId = message.photo[message.photo.length - 1].file_id;
+
+      const fileId =
+        message.photo[message.photo.length - 1].file_id;
 
       await bot.telegram.sendPhoto(
         TARGET_CHAT_ID,
         fileId,
-        { caption: message.caption || "" }
+        {
+          caption: message.caption || ""
+        }
       );
+
       await ctx.reply("✅ Photo sent to group.");
       return;
     }
 
     await ctx.reply("⚠️ This message type is not supported yet.");
+
   } catch (error) {
+
     console.error("Forward error:", error.message);
+
     await ctx.reply("❌ Failed to forward.");
   }
 });
 
 bot.launch();
+
 console.log("🚀 NijiX Forward Bot running...");
 
 process.once("SIGINT", () => bot.stop("SIGINT"));
